@@ -1,11 +1,14 @@
 import * as Stat from "./Stat.mjs";
 import * as Config from "./Config.js";
 import * as PackageManager from "./PackageManager.mjs";
+import * as Step from "./Step.mjs";
 import { execSync } from "child_process";
 
 import { pipe } from "effect";
 import { Locales, getLocale } from './Locales.js';
 import { getPlatform } from './Platform';
+import { STEPS_VARIANT, STEP_PRESET } from './Step.Preset.mjs';
+import { A } from '@mobily/ts-belt';
 
 export type t = {
   packageManager: PackageManager.t;
@@ -19,6 +22,7 @@ export type t = {
   locale: Locales;
   verbose: boolean;
   availableCommands: string[];
+  steps: ReadonlyArray<Step.t>
 };
 
 type StagedFile = string;
@@ -64,10 +68,18 @@ export const collectScript  = ()=>{
   return Object.keys(scripts)
 }
 
+export const loadSteps = async(steps: STEPS_VARIANT[]):Promise<ReadonlyArray<Step.t>> =>{
+  return pipe(
+    steps,
+    A.map(x=>STEP_PRESET[x])
+  )
+}
+
 export const make = async ({
   sourceDir,
   unSafeBranchList,
   verbose,
+  steps,
 }: Config.t): Promise<t> => {
   const locale = await getLocale(getPlatform());
   return {
@@ -82,5 +94,6 @@ export const make = async ({
     locale,
     verbose,
     availableCommands: collectScript()??[],
+    steps:await loadSteps(steps),
   };
 };

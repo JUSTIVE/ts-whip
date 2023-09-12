@@ -64,7 +64,7 @@ const notifyNoTSFiles = (envSet: EnvSet.t): Program => {
   return envSet;
 };
 
-const runSteps = async (steps: Step.t[]) => async (envSet: EnvSet.t) => {
+const runSteps = async (steps: ReadonlyArray<Step.t>) => async (envSet: EnvSet.t) => {
   const promises = steps.filter(
 		step=>{
 			return match(step.id)
@@ -94,7 +94,7 @@ const runStep = (step: Step.t, envSet: EnvSet.t) => {
 };
 
 const runFirstFailedStep = async (
-  steps: Step.t[],
+  steps: ReadonlyArray<Step.t>,
   envSet: EnvSet.t,
   results: PromiseSettledResult<Step.StepResult>[],
 ) => {
@@ -114,8 +114,9 @@ const runFirstFailedStep = async (
   return await runStep(steps[failedIndex], envSet);
 };
 
-const program = async (steps: Step.t[]) => async (envSet: EnvSet.t) => {
+const program = async (envSet: EnvSet.t) => {
   Stat.Log(envSet.stat,envSet.locale);
+  const {steps} = envSet
   const results = await pipe(
     envSet,
     exitWhenNoStagedFiles,
@@ -149,4 +150,4 @@ const program = async (steps: Step.t[]) => async (envSet: EnvSet.t) => {
   }
 };
 
-await pipe(await EnvSet.make(await Config.load()), await program(Step.STEPS));
+await pipe(await EnvSet.make(await Config.load()), await program);

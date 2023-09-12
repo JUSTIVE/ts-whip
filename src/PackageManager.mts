@@ -8,7 +8,19 @@ import { VerboseLog } from "./Decorator.mjs";
 import { Locales } from './Locales';
 import { F, O } from '@mobily/ts-belt';
 
-export type t = "npm" | "yarn" | "pnpm";
+export type t = "npm" | "yarn" | "pnpm" |"bun";
+export type PackageManagerExecutable = "npx" | "pnpx" | "bunx";
+
+export const toPackageManagerExecutable = (packageManager:t):PackageManagerExecutable => {
+  return match(packageManager)
+  .returnType<PackageManagerExecutable>()
+  .with("npm",()=>"npx")
+  .with("yarn",()=>"npx")//no alternatives for yarn
+  .with("bun",()=>"bunx")
+  .with("pnpm",()=>"pnpx")
+  .exhaustive()
+
+}
 
 const determine = (): O.Option<t> => {
   return pipe(
@@ -20,6 +32,7 @@ const determine = (): O.Option<t> => {
     O.flatMap((lockFile) => {
       return match(lockFile)
         .returnType<O.Option<t>>()
+        .with("bun.lockb",F.always("bun"))
         .with("package-lock.json", F.always(O.Some("npm")))
         .with("yarn.lock", F.always(O.Some("yarn")))
         .with("pnpm-lock.yaml", F.always(O.Some("pnpm")))
@@ -36,12 +49,13 @@ const askPackageManager = async (locale:Locales): Promise<t> => {
   .exhaustive()
   const response = await select(questionPrompt, {
     choices: [
+      { value: "bun", label:"bun"},
       { value: "npm", label: "npm" },
       { value: "yarn", label: "yarn" },
       { value: "pnpm", label: "pnpm" },
     ],
   });
-  return response === "npm" || response === "yarn" || response === "pnpm"
+  return response === "bun" ||response === "npm" || response === "yarn" || response === "pnpm"
     ? response
     : await askPackageManager(locale);
 };

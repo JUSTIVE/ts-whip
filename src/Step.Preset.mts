@@ -2,6 +2,7 @@ import * as SkipCondition from "./SkipCondition.mjs";
 import * as PostAction from "./PostAction.mjs";
 import * as EnvSet from "./EnvSet.mjs";
 import * as Step from "./Step.mjs";
+import * as PackageManager from "./PackageManager.mjs";
 import { match } from 'ts-pattern';
 
 const _ALWAYS_FAILING_ONLY_FOR_TESTING: Step.t = {
@@ -65,8 +66,8 @@ const ESLINT_CHECKING: Step.t = {
 		.with("ko-KR",()=>"린트 체크")
 		.with("ja-JP",()=>"リントチェック")
 		.exhaustive(),
-  command: ({ sourceDir }) =>
-    `npx eslint --ext .ts --ext .tsx --ext .mts --ext .mtsx ${sourceDir.join(
+  command: ({packageManager, sourceDir }) =>
+    `${PackageManager.toPackageManagerExecutable(packageManager)} eslint --ext .ts --ext .tsx --ext .mts --ext .mtsx ${sourceDir.join(
       " ",
     )} --fix`,
   skipCondition: [SkipCondition.NO_PRODUCT_TYPESCRIPT_FILES],

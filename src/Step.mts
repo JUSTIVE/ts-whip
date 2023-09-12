@@ -1,7 +1,6 @@
 import * as SkipCondition from "./SkipCondition.mjs";
 import * as PostAction from "./PostAction.mjs";
 import * as EnvSet from "./EnvSet.mjs";
-import { STEP_PRESET } from "./Step.Preset.mjs";
 import { Spinner } from "@topcli/spinner";
 import chalk from "chalk";
 import { exec } from "child_process";
@@ -20,14 +19,6 @@ export type t = {
 };
 
 export type StepResult = "SUCCESS" | "FAIL" | "SKIP";
-
-export const STEPS: t[] = [
-  STEP_PRESET.BRANCH_CHECKING,
-  STEP_PRESET.FORMAT_TYPESCRIPT_FILES,
-  STEP_PRESET.ESLINT_CHECKING,
-  STEP_PRESET.TYPE_CHECKING,
-  STEP_PRESET.BUILD,
-];
 
 export const getName = ({ emoji, name }: t, locale: Locales) => `${emoji ?? "  "} ${name(locale)}`;
 export const getCommand = (envSet: EnvSet.t, { command }: t) => command(envSet);
