@@ -9,3 +9,5 @@ export const NO_PRODUCT_TYPESCRIPT_FILES: t = ({ ProductTSFilesList }) =>
 export const NO_COMMAND = (command:string):t=>({availableCommands})=>{
   return !availableCommands.includes(command);
 }
+
+export const NO_TEST_FILES:t = ({testFileExists})=>!testFileExists

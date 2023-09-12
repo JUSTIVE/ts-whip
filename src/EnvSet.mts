@@ -22,6 +22,7 @@ export type t = {
   locale: Locales;
   verbose: boolean;
   availableCommands: string[];
+  testFileExists:boolean;
   steps: ReadonlyArray<Step.t>
 };
 
@@ -35,6 +36,13 @@ const getStagedFileList = async (): Promise<StagedFileList> => {
     .slice(0, -1)
     .map((filename) => (filename.includes(" ") ? `"${filename}"` : filename));
 };
+
+const isAnyTextFileExists = async()=>{
+  return execSync('find . -name "*.test.*" ! -path "*/node_modules/*"')
+  .toString()
+  .split("\n")
+  .length > 0
+}
 
 const getStagedTSFileList = (stagedFileList: StagedFileList): StagedFileList =>
   stagedFileList.filter((filename) =>
@@ -93,6 +101,7 @@ export const make = async ({
     safeBranch: pipe(unSafeBranchList, determineSafeBranch),
     locale,
     verbose,
+    testFileExists:await isAnyTextFileExists(),
     availableCommands: collectScript()??[],
     steps:await loadSteps(steps),
   };

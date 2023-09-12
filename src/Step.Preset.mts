@@ -67,7 +67,7 @@ const ESLINT_CHECKING: Step.t = {
 		.with("ja-JP",()=>"リントチェック")
 		.exhaustive(),
   command: ({packageManager, sourceDir }) =>
-    `${PackageManager.toPackageManagerExecutable(packageManager)} eslint --ext .ts --ext .tsx --ext .mts --ext .mtsx ${sourceDir.join(
+    `${PackageManager.getPackageManagerExecutor(packageManager)} eslint --ext .ts --ext .tsx --ext .mts --ext .mtsx ${sourceDir.join(
       " ",
     )} --fix`,
   skipCondition: [SkipCondition.NO_PRODUCT_TYPESCRIPT_FILES],
@@ -109,7 +109,7 @@ const TEST:Step.t = {
 		.with("ja-JP",()=>"テスト実行")
 		.exhaustive(),
 	command: ({ packageManager }) => `${packageManager} run test`,
-	skipCondition: [SkipCondition.NO_PRODUCT_TYPESCRIPT_FILES, SkipCondition.NO_COMMAND("test")],		
+	skipCondition: [SkipCondition.NO_PRODUCT_TYPESCRIPT_FILES, SkipCondition.NO_COMMAND("test"),SkipCondition.NO_TEST_FILES ],		
 }
 
 export const STEP_PRESET = {

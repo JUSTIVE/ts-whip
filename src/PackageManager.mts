@@ -6,13 +6,13 @@ import fs from "fs";
 import { match } from "ts-pattern";
 import { VerboseLog } from "./Decorator.mjs";
 import { Locales } from './Locales';
-import { F, O } from '@mobily/ts-belt';
+import { A, F, O } from '@mobily/ts-belt';
 
 export type t = "npm" | "yarn" | "pnpm" |"bun";
 export type PackageManagerExecutable = "npx" | "pnpx" | "bunx";
 
-export const toPackageManagerExecutable = (packageManager:t):PackageManagerExecutable => {
-  return match(packageManager)
+const toPackageManagerExecutable = (packageManager:t):PackageManagerExecutable =>
+   match(packageManager)
   .returnType<PackageManagerExecutable>()
   .with("npm",()=>"npx")
   .with("yarn",()=>"npx")//no alternatives for yarn
@@ -20,26 +20,38 @@ export const toPackageManagerExecutable = (packageManager:t):PackageManagerExecu
   .with("pnpm",()=>"pnpx")
   .exhaustive()
 
-}
+
+export const getPackageManagerExecutor = (packageManager:t):PackageManagerExecutable=>
+  pipe(
+    O.fromPredicate<PackageManagerExecutable>("bunx",()=>process.argv0==='bun'),
+    O.getWithDefault(toPackageManagerExecutable(packageManager))
+  )
 
 const determine = (): O.Option<t> => {
   return pipe(
     fs
       .readdirSync("./")
-      .filter((filename) => filename.includes("lock"))
-      .at(0),
-    O.fromNullable,
-    O.flatMap((lockFile) => {
-      return match(lockFile)
-        .returnType<O.Option<t>>()
-        .with("bun.lockb",F.always("bun"))
-        .with("package-lock.json", F.always(O.Some("npm")))
-        .with("yarn.lock", F.always(O.Some("yarn")))
-        .with("pnpm-lock.yaml", F.always(O.Some("pnpm")))
-        .otherwise(F.always(O.None));
-    }),
+      .filter((filename) => filename.includes("lock")||filename.includes("lockb")),
+    A.filterMap(fromLockFile),
+    A.reverse,
+    A.get(0)
   );
 };
+
+const fromLockFile = (lockFileName:string):O.Option<t>=>
+  match(lockFileName)
+  .with("bun.lockb",F.always(O.Some("bun")))
+  .with("package-lock.json", F.always(O.Some("npm")))
+  .with("yarn.lock", F.always(O.Some("yarn")))
+  .with("pnpm-lock.yaml", F.always(O.Some("pnpm")))
+  .otherwise(F.always(O.None))
+
+const make = (value:string):O.Option<t> => (
+  pipe(
+    value,
+    O.fromPredicate(['bun', 'npm', 'yarn', 'pnpm'].includes)
+  ) as O.Option<t>
+)
 
 const askPackageManager = async (locale:Locales): Promise<t> => {
   const questionPrompt = match(locale)
@@ -55,9 +67,11 @@ const askPackageManager = async (locale:Locales): Promise<t> => {
       { value: "pnpm", label: "pnpm" },
     ],
   });
-  return response === "bun" ||response === "npm" || response === "yarn" || response === "pnpm"
-    ? response
-    : await askPackageManager(locale);
+  return pipe(
+    response,
+    make,
+    O.getWithDefault(await askPackageManager(locale))
+  )
 };
 
 export const get = async (verbose: boolean,locale:Locales): Promise<t> => {

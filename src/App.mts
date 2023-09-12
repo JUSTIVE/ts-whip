@@ -115,7 +115,9 @@ const runFirstFailedStep = async (
 };
 
 const program = async (envSet: EnvSet.t) => {
+  
   Stat.Log(envSet.stat,envSet.locale);
+  
   const {steps} = envSet
   const results = await pipe(
     envSet,
