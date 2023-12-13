@@ -1,36 +1,38 @@
 {
-  "name": "ts-training-wheel",
-  "version": "0.0.2",
-  "description": "",
-  "type": "module",
-  "main": "./dist/index.mjs",
-  "scripts": {
-    "build": "tsc -p . --noEmit && esbuild ./src/App.mts --bundle --format=esm --platform=node --outfile=./dist/index.mjs --mangle-props=_$ --minify && esbuild ./src/Setup.mts --bundle --format=esm --platform=node --outfile=./dist/setup.mjs --mangle-props=_$ --minify"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@mobily/ts-belt": "4.0.0-rc.5",
-    "@topcli/prompts": "^1.2.0",
-    "@topcli/spinner": "^2.1.2",
-    "@topcli/wcwidth": "^1.0.1",
-    "chalk": "^5.3.0",
-    "effect": "2.0.0-next.22",
-    "husky": "^8.0.3",
-    "os-locale": "^6.0.2",
-    "prompts": "link:@types/@topcli/prompts",
-    "ts-command-line-args": "^2.5.1",
-    "ts-pattern": "^5.0.4",
-    "typescript": "^5.1.6"
-  },
-  "devDependencies": {
-    "@types/node": "^20.4.5",
-    "@typescript-eslint/eslint-plugin": "^6.2.1",
-    "@typescript-eslint/parser": "^6.2.1",
-    "esbuild": "^0.18.17",
-    "eslint": "^8.46.0",
-    "prettier": "3.0.0",
-    "prettier-eslint": "^15.0.1"
-  }
+	"name": "ts-training-wheel",
+	"version": "0.0.2",
+	"description": "",
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"scripts": {
+		"build": "tsc -p . --noEmit && esbuild ./src/App.ts --bundle --format=esm --platform=node --outfile=./dist/index.mjs --mangle-props=_$ --minify && esbuild ./src/Setup.ts --bundle --format=esm --platform=node --outfile=./dist/setup.mjs --mangle-props=_$ --minify",
+		"format": "biome format ./src --write",
+		"lint": "pnpm biome check --apply ./src"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@biomejs/biome": "^1.4.1",
+		"@mobily/ts-belt": "4.0.0-rc.5",
+		"@topcli/prompts": "^1.7.0",
+		"@topcli/spinner": "^2.1.2",
+		"@topcli/wcwidth": "^1.0.1",
+		"chalk": "^5.3.0",
+		"effect": "2.0.0-next.22",
+		"husky": "^8.0.3",
+		"os-locale": "^6.0.2",
+		"prompts": "link:@types/@topcli/prompts",
+		"ts-command-line-args": "^2.5.1",
+		"ts-pattern": "^5.0.6",
+		"typescript": "^5.3.3"
+	},
+	"devDependencies": {
+		"@types/node": "^20.10.4",
+		"@typescript-eslint/eslint-plugin": "^6.14.0",
+		"@typescript-eslint/parser": "^6.14.0",
+		"esbuild": "^0.18.20",
+		"eslint": "^8.55.0",
+		"prettier-eslint": "^15.0.1"
+	}
 }
