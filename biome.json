@@ -3,10 +3,16 @@
 	"organizeImports": {
 		"enabled": true
 	},
+	"javascript": {
+		"formatter": {
+			"enabled": true
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true
-		}
+		},
+		"ignore": ["dist"]
 	}
 }

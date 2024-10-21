@@ -1,27 +1,25 @@
-import { exec } from "child_process";
+import { exec } from "node:child_process";
 import { Spinner } from "@topcli/spinner";
 import chalk from "chalk";
-import * as EnvSet from "./EnvSet.js";
-import { Locales } from "./Locales.js";
-import * as PostAction from "./PostAction.js";
-import * as SkipCondition from "./SkipCondition.js";
+import type * as EnvSet from "./EnvSet.js";
+import type * as PostAction from "./PostAction.js";
+import type * as SkipCondition from "./SkipCondition.js";
 
 export type t = {
 	id: string;
 	emoji?: string;
-	name: (locale: Locales) => string;
+	name: string;
 	skipCondition?: SkipCondition.t[];
 	command: (envSet: EnvSet.t) => string;
 	recommendedAction?: (envSet: EnvSet.t) => string;
-	errorMessage?: (locale: Locales) => string;
+	errorMessage?: string;
 	expectedExitCode?: number;
 	postAction?: PostAction.t;
 };
 
 export type StepResult = "SUCCESS" | "FAIL" | "SKIP";
 
-export const getName = ({ emoji, name }: t, locale: Locales) =>
-	`${emoji ?? "  "} ${name(locale)}`;
+export const getName = ({ emoji, name }: t) => `${emoji ?? "  "} ${name}`;
 export const getCommand = (envSet: EnvSet.t, { command }: t) => command(envSet);
 export const getRecommendedAction = (
 	envSet: EnvSet.t,
@@ -34,16 +32,16 @@ export const getErrorMessage = (
 	{ errorMessage, recommendedAction, command }: t,
 ): string =>
 	errorMessage
-		? errorMessage(envSet.locale)
+		? errorMessage
 		: recommendedAction
-		  ? recommendedAction(envSet)
-		  : command(envSet);
+			? recommendedAction(envSet)
+			: command(envSet);
 
 export const runner = async (
 	step: t,
 	envSet: EnvSet.t,
 ): Promise<StepResult> => {
-	const name = getName(step, envSet.locale);
+	const name = getName(step);
 	return new Promise((resolve, reject) => {
 		const spinner = new Spinner().start(`${chalk.bgGray("    ")} ${name}`);
 

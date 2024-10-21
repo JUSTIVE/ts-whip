@@ -1,8 +1,8 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import { O, pipe } from "@mobily/ts-belt";
 import { osLocaleSync } from "os-locale";
 import { P, match } from "ts-pattern";
-import { Platform } from "./Platform";
+import type { Platform } from "./Platform";
 
 export type Locales = "en-US" | "ko-KR" | "ja-JP";
 

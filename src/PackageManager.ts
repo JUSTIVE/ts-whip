@@ -1,10 +1,9 @@
-import fs from "fs";
-import { A, F, O } from "@mobily/ts-belt";
+import fs from "node:fs";
+import { A, F, O, pipe } from "@mobily/ts-belt";
 import { select } from "@topcli/prompts";
-import { pipe } from "effect/Function";
 import { match } from "ts-pattern";
 import { VerboseLog } from "./Decorator.js";
-import { Locales } from "./Locales.js";
+import Message from "./Message.js";
 
 export type t = "npm" | "yarn" | "pnpm" | "bun";
 export type PackageManagerExecutable = "npx" | "pnpx" | "bunx";
@@ -39,9 +38,7 @@ const determine = (): O.Option<t> => {
 				(filename) => filename.includes("lock") || filename.includes("lockb"),
 			),
 		A.filterMap(fromLockFile),
-		A.reverse,
-		A.get(0),
-	);
+	).at(-1);
 };
 
 const fromLockFile = (lockFileName: string): O.Option<t> =>
@@ -53,18 +50,13 @@ const fromLockFile = (lockFileName: string): O.Option<t> =>
 		.otherwise(F.always(O.None));
 
 const make = (value: string): O.Option<t> =>
-	pipe(
+	O.fromPredicate(
 		value,
-		O.fromPredicate(["bun", "npm", "yarn", "pnpm"].includes),
+		["bun", "npm", "yarn", "pnpm"].includes,
 	) as O.Option<t>;
 
-const askPackageManager = async (locale: Locales): Promise<t> => {
-	const questionPrompt = match(locale)
-		.with("en-US", F.always("Select your package manager"))
-		.with("ko-KR", F.always("패키지 매니저를 선택하세요."))
-		.with("ja-JP", F.always("パッケージマネージャーを選択してください。"))
-		.exhaustive();
-	const response = await select(questionPrompt, {
+const askPackageManager = async (): Promise<t> => {
+	const response = await select(Message.ASK_PACKAGE_MANAGER, {
 		choices: [
 			{ value: "bun", label: "bun" },
 			{ value: "npm", label: "npm" },
@@ -72,29 +64,15 @@ const askPackageManager = async (locale: Locales): Promise<t> => {
 			{ value: "pnpm", label: "pnpm" },
 		],
 	});
-	return pipe(
-		response,
-		make,
-		O.getWithDefault(await askPackageManager(locale)),
-	);
+	return pipe(response, make, O.getWithDefault(await askPackageManager()));
 };
 
-export const get = async (verbose: boolean, locale: Locales): Promise<t> => {
-	const packageManager = match(determine())
+export const get = async (verbose: boolean): Promise<t> => {
+	const packageManager = await match(determine())
 		.when(O.isSome, F.identity<t>)
-		.otherwise(async () => await askPackageManager(locale));
-
+		.otherwise(async () => await askPackageManager());
 	if (verbose) {
-		const message = match(locale)
-			.with("en-US", F.always(`Detected Package Manager is ${packageManager}`))
-			.with("ko-KR", F.always(`패키지 매니저는 ${packageManager} 입니다.`))
-			.with(
-				"ja-JP",
-				F.always(`パッケージマネージャーは${packageManager}です。`),
-			)
-			.exhaustive();
-		VerboseLog(message);
+		VerboseLog(Message.PACKAGE_MANAGER_IS(packageManager));
 	}
-
 	return packageManager;
 };

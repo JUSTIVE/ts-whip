@@ -1,14 +1,14 @@
-import { execSync } from "child_process";
-import * as Config from "./Config.js";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { A, O, pipe } from "@mobily/ts-belt";
+import { P, match } from "ts-pattern";
+import type * as Config from "./Config.js";
+import type * as EnvSet from "./EnvSet.js";
 import * as PackageManager from "./PackageManager.js";
 import * as Stat from "./Stat.js";
-import * as Step from "./Step.js";
-
-import { A, F, O } from "@mobily/ts-belt";
-import { pipe } from "effect";
-import { Locales, getLocale } from "./Locales.js";
-import { getPlatform } from "./Platform.js";
-import { STEPS_VARIANT, STEP_PRESET } from "./Step.Preset.js";
+import { type STEPS_VARIANT, STEP_PRESET } from "./Step.Preset.js";
+import type * as Step from "./Step.js";
 
 export type t = {
 	packageManager: PackageManager.t;
@@ -19,7 +19,6 @@ export type t = {
 	sourceDir: string[];
 	unSafeBranchList: string[];
 	safeBranch: boolean;
-	locale: Locales;
 	verbose: boolean;
 	availableCommands: string[];
 	testFileExists: boolean;
@@ -37,18 +36,42 @@ const getStagedFileList = async (): Promise<StagedFileList> => {
 		.map((filename) => (filename.includes(" ") ? `"${filename}"` : filename));
 };
 
-const isAnyTextFileExists = async () => {
-	return (
-		execSync('find . -name "*.test.*" ! -path "*/node_modules/*"')
-			.toString()
-			.split("\n").length > 0
-	);
+const isAnyTestFileExists = async () => {
+	const direntFullPath = ({ parentPath, name }: fs.Dirent) =>
+		`${parentPath}${path.sep}${name}`;
+	const getFiles = (dir: string): fs.Dirent[] => {
+		const dirents = fs.readdirSync(dir, { withFileTypes: true });
+		const files = dirents.filter(
+			(dirent) =>
+				dirent.isFile() &&
+				dirent.name.includes(".test.") &&
+				dirent.name.includes(".ts"),
+		);
+		const subdirectories = dirents
+			.filter((dirent) => dirent.isDirectory())
+			.filter(
+				(x) =>
+					!x.name.startsWith("node_modules") &&
+					!x.name.includes("__generated__") &&
+					!x.name.startsWith("."),
+			);
+
+		for (const subdirectory of subdirectories) {
+			files.push(...getFiles(direntFullPath(subdirectory)));
+		}
+		return files;
+	};
+	return getFiles("./").some((x) => x.name.includes(".test."));
 };
 
-const getStagedTSFileList = (stagedFileList: StagedFileList): StagedFileList =>
-	stagedFileList.filter((filename) =>
-		[".ts", ".tsx", ".mts", ".mtsx"].some((ext) => filename.endsWith(ext)),
+const getStagedTSFileList = (
+	stagedFileList: StagedFileList,
+): StagedFileList => {
+	const allowed_exts = [".ts", ".tsx", ".mts", ".mtsx"];
+	return stagedFileList.filter((filename) =>
+		allowed_exts.some((ext) => filename.endsWith(ext)),
 	);
+};
 
 const getProductTSFileList = (TSFilesList: string[]) =>
 	TSFilesList.filter((filename) => !filename.includes("husky"));
@@ -57,32 +80,37 @@ const stagedFileList = await getStagedFileList();
 const TSFilesList = getStagedTSFileList(stagedFileList);
 const ProductTSFilesList = getProductTSFileList(TSFilesList);
 
-export const determineSafeBranch = (unSafeBranchList: string[]): boolean => {
-	return pipe(
-		O.fromExecution(() =>
-			execSync(
-				`git rev-parse --abbrev-ref HEAD | grep -E "${unSafeBranchList.join(
-					"|",
-				)}"`,
-			),
-		),
-		O.match(F.always(false), F.always(true)),
+export const determineSafeBranch = async (
+	unSafeBranchList: string[],
+): Promise<boolean> =>
+	!unSafeBranchList.includes(
+		((await Bun.file(".git/HEAD").text()).split(" ")[1] ?? "")
+			.split("/")
+			.at(-1) ?? "",
 	);
-};
 
 //read available scripts from package.json
-export const collectScript = () => {
-	const packageJSON = JSON.parse(execSync("cat package.json").toString());
+export const collectScript = async () => {
+	const file = await Bun.file("package.json").text();
+	const packageJSON = JSON.parse(file);
 	const scripts = packageJSON.scripts;
 	return Object.keys(scripts);
 };
 
 export const loadSteps = async (
-	steps: STEPS_VARIANT[],
+	steps: (STEPS_VARIANT | [STEPS_VARIANT, string])[],
 ): Promise<ReadonlyArray<Step.t>> => {
 	return pipe(
 		steps,
-		A.map((x) => STEP_PRESET[x]),
+		A.filterMap((x) =>
+			match(x)
+				.with(P.string, (x) => STEP_PRESET[x])
+				.with([P.string, P.string], ([step, command]) => ({
+					...STEP_PRESET[step],
+					command: (_envSet: EnvSet.t) => command,
+				}))
+				.otherwise(() => O.None),
+		),
 	);
 };
 
@@ -90,22 +118,36 @@ export const make = async ({
 	sourceDir,
 	unSafeBranchList,
 	verbose,
-	steps,
+	steps: steps_,
 }: Config.t): Promise<t> => {
-	const locale = await getLocale(getPlatform());
+	const [
+		packageManager,
+		testFileExists,
+		availableCommands,
+		steps,
+		safeBranch,
+		stat,
+	] = await Promise.all([
+		PackageManager.get(verbose),
+		isAnyTestFileExists(),
+		collectScript(),
+		loadSteps(steps_),
+		determineSafeBranch(unSafeBranchList),
+		Stat.getStat(),
+	]);
+
 	return {
-		packageManager: await PackageManager.get(verbose, locale),
+		packageManager,
 		stagedFileList,
 		TSFilesList,
 		ProductTSFilesList,
-		stat: Stat.getStat(),
+		stat,
 		sourceDir,
 		unSafeBranchList,
-		safeBranch: pipe(unSafeBranchList, determineSafeBranch),
-		locale,
+		safeBranch,
 		verbose,
-		testFileExists: await isAnyTextFileExists(),
-		availableCommands: collectScript() ?? [],
-		steps: await loadSteps(steps),
+		testFileExists,
+		availableCommands,
+		steps,
 	};
 };

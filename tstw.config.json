@@ -1,13 +1,13 @@
 {
-  "steps": [
-    "BRANCH_CHECKING",
-    "FORMAT_TYPESCRIPT_FILES",
-    "ESLINT_CHECKING",
-    "TYPE_CHECKING",
-    "BUILD",
-    "TEST"
-  ],
-  "unSafeBranchList": ["main", "master"],
-  "sourceDir": ["./src"],
-  "verbose": false
+	"steps": [
+		"BRANCH_CHECKING",
+		["FORMAT_TYPESCRIPT_FILES", "bun biome format --write"],
+		["ESLINT_CHECKING", "bun biome lint"],
+		"TYPE_CHECKING",
+		"BUILD",
+		"TEST"
+	],
+	"unSafeBranchList": ["main", "master"],
+	"sourceDir": ["./src"],
+	"verbose": false
 }

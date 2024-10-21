@@ -1,9 +1,9 @@
-import { execSync } from "child_process";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import { F, O, pipe } from "@mobily/ts-belt";
 import chalk from "chalk";
-import { match } from "ts-pattern";
 import * as Decorator from "./Decorator.js";
-import { Locales } from "./Locales.js";
+import Message from "./Message.js";
 
 export type FileDiff = {
 	added: number;
@@ -18,8 +18,9 @@ export type t = {
 	};
 };
 
-export const getStat = (): t => {
-	const files: FileDiff[] = execSync("git diff --cached --numstat")
+export const getStat = async (): Promise<t> => {
+	const exec_ = promisify(exec);
+	const files: FileDiff[] = (await exec_("git diff --cached --numstat")).stdout
 		.toString()
 		.split("\n")
 		.slice(0, -1)
@@ -49,10 +50,7 @@ export const getStat = (): t => {
 
 //log with box and text in it
 
-export const Log = (
-	{ files, total: { added, deleted } }: t,
-	locale: Locales,
-) => {
+export const Log = ({ files, total: { added, deleted } }: t) => {
 	const logFile = (value: FileDiff) => {
 		const tooManyConstraint = 50;
 		const tooManyAdded = value.added > tooManyConstraint;
@@ -67,73 +65,24 @@ export const Log = (
 		const tooManyChangedTag = pipe(
 			manyChanged,
 			O.fromPredicate(F.identity),
-			O.map(
-				F.always(
-					match(locale)
-						.with("en-US", () => "too many changes")
-						.with("ko-KR", () => "너무 많은 변경이 있습니다")
-						.with("ja-JP", () => "多すぎる変更")
-						.exhaustive(),
-				),
-			),
+			O.map(F.always(Message.TOO_MANY_CHANGES)),
 			O.getWithDefault(""),
 		);
 
 		console.log(`${added}\t${deleted}\t${filename}\t${tooManyChangedTag}`);
 	};
 
-	const title = match(locale)
-		.with("en-US", () => "Staged Files")
-		.with("ko-KR", () => "스테이지된 파일")
-		.with("ja-JP", () => "ステージされたファイル")
-		.exhaustive();
-
-	const addedLabel = match(locale)
-		.with("en-US", () => "added")
-		.with("ko-KR", () => "추가됨")
-		.with("ja-JP", () => "追加")
-		.exhaustive();
-
-	const deletedLabel = match(locale)
-		.with("en-US", () => "deleted")
-		.with("ko-KR", () => "삭제됨")
-		.with("ja-JP", () => "削除")
-		.exhaustive();
-
-	const fileNameLabel = match(locale)
-		.with("en-US", () => "filename")
-		.with("ko-KR", () => "파일명")
-		.with("ja-JP", () => "ファイル名")
-		.exhaustive();
-
-	console.log(`\n${chalk.bgCyan(`\n ${title} `)}`);
+	console.log(`\n${chalk.bgCyan(`\n ${Message.STAGED_FILES} `)}`);
 	console.log(
-		`\n${chalk.cyan(`${addedLabel}\t${deletedLabel}\t${fileNameLabel}`)}\n`,
+		`\n${chalk.cyan(`${Message.ADDED}\t${Message.DELETED}\t${Message.FILENAME}`)}\n`,
 	);
 	files.map(logFile);
 
-	const totalAddedLabel = match(locale)
-		.with("en-US", () => "total added")
-		.with("ko-KR", () => "총 추가됨")
-		.with("ja-JP", () => "合計追加")
-		.exhaustive();
-
-	const totalDeletedLabel = match(locale)
-		.with("en-US", () => "total deleted")
-		.with("ko-KR", () => "총 삭제됨")
-		.with("ja-JP", () => "合計削除")
-		.exhaustive();
-
-	console.log(`\n${totalAddedLabel}: ${chalk.green(added)}`);
-	console.log(`${totalDeletedLabel}: ${chalk.red(deleted)}\n`);
+	console.log(`\n${Message.TOTAL_ADDED}: ${chalk.green(added)}`);
+	console.log(`${Message.TOTAL_DELETED}: ${chalk.red(deleted)}\n`);
 
 	const tooManyChanged = added + deleted > 200 || files.length > 20;
 	if (tooManyChanged) {
-		const tooManyChangedLabel = match(locale)
-			.with("en-US", () => "Too many changes!!!")
-			.with("ko-KR", () => "너무 많은 변경이 있습니다!!!")
-			.with("ja-JP", () => "多すぎる変更があります!!!")
-			.exhaustive();
-		Decorator.Box(tooManyChangedLabel, chalk.yellow);
+		Decorator.Box(Message.TOO_MANY_CHANGES_LABEL, chalk.yellow);
 	}
 };
