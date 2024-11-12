@@ -84,9 +84,11 @@ export const determineSafeBranch = async (
 	unSafeBranchList: string[],
 ): Promise<boolean> =>
 	!unSafeBranchList.includes(
-		((await Bun.file(".git/HEAD").text()).split(" ")[1] ?? "")
-			.split("/")
-			.at(-1) ?? "",
+		(
+			((await Bun.file(".git/HEAD").text()).split(" ")[1] ?? "")
+				.split("/")
+				.at(-1) ?? ""
+		).trim(),
 	);
 
 //read available scripts from package.json
