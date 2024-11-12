@@ -49,9 +49,15 @@ const runSteps =
 				.with("BUILD", () => envSet.safeBranch)
 				.otherwise(() => true),
 		);
-		const results = await Promise.allSettled(
-			promises.map((step) => Step.runner(step, envSet)),
-		);
+
+		const results: Step.StepResult[] = [];
+		for (const i of promises) {
+			results.push(await Step.runner(i, envSet));
+		}
+
+		// const results = await Promise.allSettled(
+		// 	promises.map((step) => Step.runner(step, envSet)),
+		// );
 		Spinner.reset();
 		return results;
 	};
@@ -72,11 +78,10 @@ const runStep = (step: Step.t, envSet: EnvSet.t) => {
 const runFirstFailedStep = async (
 	steps: ReadonlyArray<Step.t>,
 	envSet: EnvSet.t,
-	results: PromiseSettledResult<Step.StepResult>[],
+	results: Step.StepResult[],
 ) => {
 	Decorator.Box(Message.RETRY_COMMAND, chalk.hex("#FF7900"));
-	const failedStep =
-		steps[results.findIndex((result) => result.status === "rejected")];
+	const failedStep = steps[results.findIndex((result) => result === "FAIL")];
 	return O.map(failedStep, async (step) => await runStep(step, envSet));
 };
 
@@ -91,7 +96,7 @@ const program = async (envSet: EnvSet.t): Promise<number> => {
 		await runSteps(steps),
 	);
 
-	if (results.some(({ status }) => status === "rejected")) {
+	if (results.some((x) => x === "FAIL")) {
 		Decorator.Box(Message.CANNOT_COMMIT, chalk.red);
 		await runFirstFailedStep(steps, envSet, results);
 		return 1;
